@@ -3,7 +3,9 @@ package `in`.jhalwabois.geogpassist
 import `in`.jhalwabois.geogpassist.adapters.CardData
 import `in`.jhalwabois.geogpassist.adapters.CardListAdapter
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.media.AudioManager
 import android.os.Bundle
@@ -13,11 +15,14 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.support.design.widget.BottomSheetBehavior
+import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
+import android.text.InputType
 import android.util.Log
 import android.view.View
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
 import com.androidnetworking.error.ANError
@@ -30,6 +35,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.maps.android.data.geojson.*
+import kotlinx.android.synthetic.main.activity_maps.*
 import kotlinx.android.synthetic.main.assist_bottomsheet.*
 import kotlinx.android.synthetic.main.content_maps.*
 import kotlinx.android.synthetic.main.persistent_assistant_layout.*
@@ -69,6 +75,32 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             multiActiveLayer.forEach { it.removeLayerFromMap() }
             activeLayer = null
             multiActiveLayer.clear()
+        }
+
+        settingsButton.setOnClickListener {
+            val input = EditText(this)
+            input.inputType = InputType.TYPE_TEXT_VARIATION_URI
+
+            val currentUrl = getSharedPreferences("app_settings", Context.MODE_PRIVATE )
+                    .getString("backend_server", "https://aksh-backend.herokuapp.com")
+            input.setText(currentUrl)
+
+            AlertDialog.Builder(this)
+                    .setTitle("Set backend server")
+                    .setView(input)
+                    .setPositiveButton("Ok", DialogInterface.OnClickListener { dialogInterface, which ->
+                        val url = input.text.toString()
+                        getSharedPreferences("app_settings", Context.MODE_PRIVATE )
+                                .edit()
+                                .putString("backend_server", url)
+                                .apply()
+
+                        dialogInterface.dismiss()
+                    })
+                    .setNegativeButton("Cancel", DialogInterface.OnClickListener { dialogInterface, which ->
+                        dialogInterface.cancel()
+                    })
+                    .show()
         }
 
         micButton.setOnClickListener {
@@ -315,7 +347,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun requestForQuery(s: String?) {
         s?.apply {
 
-            val req = getResponseForQuery(this, currentLanguage)
+            val req = getResponseForQuery(this@MapsActivity, this, currentLanguage)
             req.getAsJSONObject(object : JSONObjectRequestListener {
 
                 override fun onResponse(response: JSONObject) {

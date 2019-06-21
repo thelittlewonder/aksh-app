@@ -33,13 +33,13 @@
                     android:textStyle="bold" />
 
                 <ImageButton
-                    android:id="@+id/imageButton"
+                    android:id="@+id/settingsButton"
                     style="@style/Widget.AppCompat.Button.Borderless.Colored"
                     android:layout_width="60dp"
                     android:layout_height="match_parent"
                     android:layout_alignParentEnd="true"
                     android:layout_alignParentTop="true"
-                    app:srcCompat="@drawable/ic_my_location_24dp" />
+                    app:srcCompat="@drawable/ic_settings_black_24dp" />
 
             </RelativeLayout>
 

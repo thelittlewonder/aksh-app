@@ -1,6 +1,8 @@
 package `in`.jhalwabois.geogpassist
 
+import android.content.Context
 import com.androidnetworking.AndroidNetworking
+import com.androidnetworking.common.ANRequest
 import com.androidnetworking.common.Priority
 
 /**
@@ -8,13 +10,13 @@ import com.androidnetworking.common.Priority
  */
 
 
-fun getResponseForQuery(query: String, currentLanguage: String) =
-        /*AndroidNetworking.get("http://aksh-assistant.herokuapp.com/nlp")
-                .addQueryParameter("q", query)
-                .setPriority(Priority.HIGH)
-                .build()*/
-        AndroidNetworking.get("http://192.168.43.6:3000/nlp")
-                .addQueryParameter("q", query)
-                .addQueryParameter("lang", currentLanguage)
-                .setPriority(Priority.HIGH)
-                .build()
+fun getResponseForQuery(context: Context, query: String, currentLanguage: String): ANRequest<out ANRequest<*>> {
+    val url = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE )
+            .getString("backend_server", "https://aksh-backend.herokuapp.com")
+
+    return AndroidNetworking.get("$url/nlp")
+            .addQueryParameter("q", query)
+            .addQueryParameter("lang", currentLanguage)
+            .setPriority(Priority.HIGH)
+            .build()
+}
