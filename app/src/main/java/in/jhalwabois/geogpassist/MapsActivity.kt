@@ -51,7 +51,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     private var textToSpeech: TextToSpeech? = null
     private val adapter = CardListAdapter()
 
-    private var currentLanguage = "en-US"
+    private var currentLanguage = "en"
+    private var gpCode: Int? = null
 
     private var activeLayer: GeoJsonLayer? = null
     private var multiActiveLayer = mutableListOf<GeoJsonLayer>()
@@ -82,7 +83,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             input.inputType = InputType.TYPE_TEXT_VARIATION_URI
 
             val currentUrl = getSharedPreferences("app_settings", Context.MODE_PRIVATE )
-                    .getString("backend_server", "https://aksh-backend.herokuapp.com")
+                    .getString("backend_server", "https://speaking-geo-gp-backend.herokuapp.com")
             input.setText(currentUrl)
 
             AlertDialog.Builder(this)
@@ -152,7 +153,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         val sydney = LatLng(84.14467752000007, 18.571550984000055)
         mMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
-        mMap.mapType = GoogleMap.MAP_TYPE_HYBRID;
+        mMap.mapType = GoogleMap.MAP_TYPE_HYBRID
 
         val data = JSONObject(getString(R.string.geojsonexample))
         addGeoGPLayer(data, false)
@@ -199,15 +200,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         userTextView.text = "Listening ..."
 
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, currentLanguage)
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE,  if (currentLanguage == "en") "en-US" else currentLanguage)
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
         intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,
-                "com.domain.app")
+                "in.jhalwabois.geogpassist")
         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
 
         val recognizer = SpeechRecognizer
                 .createSpeechRecognizer(this.applicationContext)
+
         val listener = object : RecognitionListener {
             override fun onResults(results: Bundle) {
                 val voiceResults = results
@@ -222,7 +224,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                     }
 
                     userTextView.text = voiceResults[0]
-                    requestForQuery(voiceResults[0])
+                    voiceResults[0]?.let {  requestForQuery(it) }
                     //Toast.makeText(this@MapsActivity, voiceResults[0], Toast.LENGTH_SHORT).show()
                 }
 
@@ -276,7 +278,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun showGeoJSON(data: JSONObject) {
 
-        val type = data.getJSONObject("location").getString("type")
+        val geojson = data.getJSONObject("geojson")
+        val type = geojson.getString("type")
         val location = data.getJSONObject("centroid")
         val coordinates = location.getJSONArray("coordinates")
 
@@ -284,11 +287,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             return
         }
         val latLng = LatLng(coordinates.getDouble(1), coordinates.getDouble(0))
+        val color = data.getString("color").let { if(it == "#fff") "#ffffff" else it }
 
         when (type) {
             "Point" -> {
                 activeLayer?.removeLayerFromMap()
-                activeLayer = GeoJsonLayer(mMap, data.getJSONObject("location"))
+                activeLayer = GeoJsonLayer(mMap, geojson)
                 activeLayer?.addLayerToMap()
 
                 activeLayer?.features?.forEach {
@@ -304,7 +308,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             }
             "Polygon" -> {
                 activeLayer?.removeLayerFromMap()
-                activeLayer = GeoJsonLayer(mMap, data.getJSONObject("location"))
+                activeLayer = GeoJsonLayer(mMap, geojson)
 
                 activeLayer?.features?.forEach {
                     it.polygonStyle = GeoJsonPolygonStyle().apply {
@@ -319,18 +323,42 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             }
             "LineString" -> {
                 activeLayer?.removeLayerFromMap()
-                activeLayer = GeoJsonLayer(mMap, data.getJSONObject("location"))
+                activeLayer = GeoJsonLayer(mMap, geojson)
 
                 activeLayer?.features?.forEach {
                     it.lineStringStyle = GeoJsonLineStringStyle().apply {
-                        color = Color.parseColor("#22a4f5")
+                        this.color = Color.parseColor("#22a4f5")
                     }
                 }
 
                 activeLayer?.addLayerToMap()
                 moveToPoint(latLng, 15)
             }
+            "MultiPolygon" -> {
+                activeLayer?.removeLayerFromMap()
+                activeLayer = GeoJsonLayer(mMap, geojson)
+
+                activeLayer?.features?.forEach {
+                    it.polygonStyle = GeoJsonPolygonStyle().apply {
+                        fillColor = Color.parseColor(color).adjustAlpha(0.25F)
+                        strokeColor = Color.parseColor(color)
+                    }
+                }
+
+                activeLayer?.addLayerToMap()
+                moveToPoint(latLng, 15)
+
+            }
         }
+    }
+
+
+    fun Int.adjustAlpha(factor: Float): Int {
+        val alpha = Math.round(Color.alpha(this) * factor)
+        val red = Color.red(this)
+        val green = Color.green(this)
+        val blue = Color.blue(this)
+        return Color.argb(alpha, red, green, blue)
     }
 
     private fun addObjectToMap(layer: GeoJsonLayer, addNew: Boolean = false) {
@@ -344,10 +372,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    private fun requestForQuery(s: String?) {
-        s?.apply {
-
-            val req = getResponseForQuery(this@MapsActivity, this, currentLanguage)
+    private fun requestForQuery(s: String) {
+        val req = getResponseForQuery(this@MapsActivity, s, currentLanguage, gpCode)
             req.getAsJSONObject(object : JSONObjectRequestListener {
 
                 override fun onResponse(response: JSONObject) {
@@ -359,7 +385,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
 
             })
-        }
     }
 
     private fun voiceReply(reply: String, language: String) {
@@ -429,23 +454,22 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                     val list = mutableListOf<CardData>()
 
                     geoInfo.getObjects().forEach {
-                        val type = it.getJSONObject("location").getString("type")
+                        val geojson = it.getJSONObject("geojson")
+                        val type = geojson.getString("type")
                         val showInCards = it.getBoolean("showInCards")
 
                         if (!showInCards) {
-                            val layer = GeoJsonLayer(mMap, it.getJSONObject("location"))
+                            val layer = GeoJsonLayer(mMap, it.getJSONObject("geojson"))
                             addObjectToMap(layer, addNew = false)
                         }
-
-                        if (showInCards) {
+                        else {
                             when (type) {
                                 "Point" -> {
 
                                     val location = it.getJSONObject("location")
                                     val coordinates = location.getJSONArray("coordinates")
 
-                                    val area = it.getJSONObject("metadata")
-                                            .getDouble("Shape_Area")
+                                    val area = it.getDouble("area") * 1_000_000
 
                                     list.add(CardData(
                                             lat = coordinates.getDouble(0),
@@ -458,8 +482,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                                     val location = d.getJSONObject("centroid")
                                     val coordinates = location.getJSONArray("coordinates")
 
-                                    val area = d.getJSONObject("metadata")
-                                            .getDouble("Shape_Area")
+                                    val area = d.getDouble("area") * 1_000_000
 
                                     list.add(CardData(
                                             lat = coordinates.getDouble(0),
@@ -472,8 +495,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                                     val location = d.getJSONObject("centroid")
                                     val coordinates = location.getJSONArray("coordinates")
 
-                                    val area = d.getJSONObject("metadata")
-                                            .getDouble("Shape_Area")
+                                    val area = d.getDouble("area") * 1_000_000
 
                                     list.add(CardData(
                                             lat = coordinates.getDouble(0),
@@ -486,8 +508,20 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                                     val location = d.getJSONObject("centroid")
                                     val coordinates = location.getJSONArray("coordinates")
 
-                                    val area = d.getJSONObject("metadata")
-                                            .getDouble("Shape_Area")
+                                    val area = d.getDouble("area") * 1_000_000
+
+                                    list.add(CardData(
+                                            lat = coordinates.getDouble(0),
+                                            long = coordinates.getDouble(1),
+                                            area = area
+                                    ))
+                                }
+                                "MultiPolygon" -> {
+                                    val d = it
+                                    val location = d.getJSONObject("centroid")
+                                    val coordinates = location.getJSONArray("coordinates")
+
+                                    val area = d.getDouble("area") * 1_000_000
 
                                     list.add(CardData(
                                             lat = coordinates.getDouble(0),
@@ -497,15 +531,17 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                                 }
                             }
                         }
+                    }
 
-                        recyclerView.visibility = View.VISIBLE
-                        Log.d("LIST", list.toString())
-                        if (list.size > 0) {
-                            adapter.updateLocations(list)
-                            showGeoJSON(geoInfo.getJSONObject(0))
-                            adapter.onItemSelected = {
-                                showGeoJSON(geoInfo.getJSONObject(it))
-                            }
+                    val filteredGeoJson = geoInfo.getObjects().filter { it.getBoolean("showInCards") }
+
+                    recyclerView.visibility = View.VISIBLE
+                    Log.d("LIST", list.toString())
+                    if (list.size > 0) {
+                        adapter.updateLocations(list)
+                        showGeoJSON(filteredGeoJson[0])
+                        adapter.onItemSelected = {
+                            showGeoJSON(filteredGeoJson[it])
                         }
                     }
 
@@ -517,7 +553,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                     val lng = loc.getDouble("lng")
 
                     val latlng = LatLng(lat, lng)
-                    val zoom = loc.getDouble("zoom")
+                    val zoom = intent.getInt("zoom")
+                    gpCode = intent.getInt("gp_code")
+                    val geoInfo = data.getJSONArray("geoInfo")
+                    showGeoJSON(geoInfo.getJSONObject(0))
 
                     moveToPoint(latlng, zoom.toInt())
                 }

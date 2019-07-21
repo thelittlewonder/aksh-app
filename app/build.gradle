@@ -5,7 +5,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
-    compileSdkVersion 27
+    compileSdkVersion 28
     defaultConfig {
         applicationId "in.jhalwabois.geogpassist"
         minSdkVersion 21
@@ -25,23 +25,26 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support:appcompat-v7:28.0.0'
     implementation 'com.android.support.constraint:constraint-layout:1.1.3'
-    implementation 'com.android.support:design:27.1.1'
+    implementation 'com.android.support:design:28.0.0'
 
-    implementation 'com.amitshekhar.android:android-networking:1.0.1'
+    implementation 'com.ayz4sci.androidfactory:permissionhelper:1.2.5'
+    implementation 'com.github.tajchert:nammu:1.2.1'
+
+    implementation 'com.amitshekhar.android:android-networking:1.0.2'
 
     implementation "android.arch.lifecycle:extensions:1.1.1"
     annotationProcessor "android.arch.lifecycle:compiler:1.1.1"
 
-    implementation 'com.google.firebase:firebase-core:12.0.0'
+    //implementation 'com.google.firebase:firebase-core:17.0.1'
     implementation 'com.loopeer.lib:shadow:0.0.4-beta3'
-    implementation 'com.google.maps.android:android-maps-utils:0.5+'
+    implementation 'com.google.maps.android:android-maps-utils:0.5'
     testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.android.support.test:runner:1.0.1'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
-    implementation 'com.google.android.gms:play-services-maps:12.0.0'
-    implementation 'com.android.support:cardview-v7:27.1.1'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    implementation 'com.google.android.gms:play-services-maps:16.0.0'
+    implementation 'com.android.support:cardview-v7:28.0.0'
 }
 
 

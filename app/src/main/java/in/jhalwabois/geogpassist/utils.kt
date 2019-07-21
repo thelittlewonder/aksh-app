@@ -10,13 +10,17 @@ import com.androidnetworking.common.Priority
  */
 
 
-fun getResponseForQuery(context: Context, query: String, currentLanguage: String): ANRequest<out ANRequest<*>> {
-    val url = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE )
-            .getString("backend_server", "https://aksh-backend.herokuapp.com")
+fun getResponseForQuery(context: Context, query: String, currentLanguage: String? = "en", gpCode: Int? = null): ANRequest<out ANRequest<*>> {
+    val url = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+            .getString("backend_server", "https://speaking-geo-gp-backend.herokuapp.com")
+    return AndroidNetworking.get("$url/api/query").apply {
+        addQueryParameter("q", query)
+        addQueryParameter("lang", currentLanguage)
+        gpCode?.let {
+            addQueryParameter("gp_code", gpCode.toString())
+        }
+        setPriority(Priority.HIGH)
+    }.build()
 
-    return AndroidNetworking.get("$url/nlp")
-            .addQueryParameter("q", query)
-            .addQueryParameter("lang", currentLanguage)
-            .setPriority(Priority.HIGH)
-            .build()
+
 }
