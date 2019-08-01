@@ -3,9 +3,7 @@ package `in`.jhalwabois.geogpassist
 import `in`.jhalwabois.geogpassist.adapters.CardData
 import `in`.jhalwabois.geogpassist.adapters.CardListAdapter
 import android.content.Context
-import android.content.DialogInterface
 import android.content.Intent
-import android.content.SharedPreferences
 import android.graphics.Color
 import android.media.AudioManager
 import android.os.Bundle
@@ -22,9 +20,7 @@ import android.support.v7.widget.RecyclerView
 import android.text.InputType
 import android.util.Log
 import android.view.View
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.Toast
+import android.widget.*
 import com.androidnetworking.error.ANError
 import com.androidnetworking.interfaces.JSONObjectRequestListener
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -34,7 +30,10 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MarkerOptions
-import com.google.maps.android.data.geojson.*
+import com.google.maps.android.data.geojson.GeoJsonLayer
+import com.google.maps.android.data.geojson.GeoJsonLineStringStyle
+import com.google.maps.android.data.geojson.GeoJsonPolygon
+import com.google.maps.android.data.geojson.GeoJsonPolygonStyle
 import kotlinx.android.synthetic.main.activity_maps.*
 import kotlinx.android.synthetic.main.assist_bottomsheet.*
 import kotlinx.android.synthetic.main.content_maps.*
@@ -42,6 +41,7 @@ import kotlinx.android.synthetic.main.persistent_assistant_layout.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
+import kotlin.properties.Delegates
 
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -51,7 +51,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     private var textToSpeech: TextToSpeech? = null
     private val adapter = CardListAdapter()
 
-    private var currentLanguage = "en"
+    private var currentLanguage by Delegates.observable("en") { _, _, newValue ->
+        val language = SUPPORTED_LANGUAGES.inverse[newValue]
+        val index = SUPPORTED_LANGUAGES.keys.indexOf(language)
+        languageChangeSpinner?.setSelection(index)
+    }
     private var gpCode: Int? = null
 
     private var activeLayer: GeoJsonLayer? = null
@@ -89,7 +93,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             AlertDialog.Builder(this)
                     .setTitle("Set backend server")
                     .setView(input)
-                    .setPositiveButton("Ok", DialogInterface.OnClickListener { dialogInterface, which ->
+                    .setPositiveButton("Ok") { dialogInterface, _ ->
                         val url = input.text.toString()
                         getSharedPreferences("app_settings", Context.MODE_PRIVATE )
                                 .edit()
@@ -97,11 +101,25 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                                 .apply()
 
                         dialogInterface.dismiss()
-                    })
-                    .setNegativeButton("Cancel", DialogInterface.OnClickListener { dialogInterface, which ->
+                    }
+                    .setNegativeButton("Cancel") { dialogInterface, _ ->
                         dialogInterface.cancel()
-                    })
+                    }
                     .show()
+        }
+
+        val spinnerAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, SUPPORTED_LANGUAGES.keys.toTypedArray())
+        languageChangeSpinner.adapter = spinnerAdapter
+        languageChangeSpinner.onItemSelectedListener = object: AdapterView.OnItemSelectedListener {
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                val language = parent.getItemAtPosition(position) as String
+                val code = SUPPORTED_LANGUAGES[language]
+                currentLanguage = code!!
+            }
+
         }
 
         micButton.setOnClickListener {
@@ -419,7 +437,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    private fun changeLanguage(language: String = "en") {
+    private fun changeLanguage(language: String = "en-IN") {
         this.currentLanguage = language
         compensateTTSDelay()
     }
@@ -443,10 +461,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 "changeLanguage" -> {
                     val language = intent.getString("lang")
-                    changeLanguage(language)
-
-                    if (language == "be")
-                        changeLanguage("bn")
+                    changeLanguage("$language-IN")
 
                 }
                 "plot" -> {

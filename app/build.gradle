@@ -31,6 +31,7 @@ dependencies {
 
     implementation 'com.ayz4sci.androidfactory:permissionhelper:1.2.5'
     implementation 'com.github.tajchert:nammu:1.2.1'
+    implementation 'com.uchuhimo:kotlinx-bimap:1.2'
 
     implementation 'com.amitshekhar.android:android-networking:1.0.2'
 

@@ -45,12 +45,12 @@
                 app:layout_constraintTop_toTopOf="parent"
                 app:srcCompat="@drawable/ic_mic_24dp" />
 
-            <ImageButton
-                android:id="@+id/imageButton2"
-                android:visibility="gone"
-                style="@style/Widget.AppCompat.Button.Borderless.Colored"
-                android:layout_width="60dp"
-                android:layout_height="wrap_content"
+            <Spinner
+                android:id="@+id/languageChangeSpinner"
+                android:text="EN"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center"
                 android:layout_marginBottom="4dp"
                 android:layout_marginStart="10dp"
                 android:layout_marginTop="4dp"

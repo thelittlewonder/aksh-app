@@ -57,7 +57,7 @@ class CardListAdapter : RecyclerView.Adapter<CardListAdapter.ViewHolder>() {
                     "${Location.convert(data.lat, Location.FORMAT_DEGREES)} " +
                     "${Location.convert(data.long, Location.FORMAT_DEGREES)}"
 
-            itemView.supportingTV.text = "${data.area} meter sq."
+            itemView.supportingTV.text = "${"%.2f".format(data.area)} meter sq."
         }
     }
 }
